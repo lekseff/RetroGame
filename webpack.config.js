@@ -15,10 +15,10 @@ module.exports = {
     clean: true,
     filename: 'app.[hash].js',
     path: path.resolve(__dirname, 'dist'),
-    assetModuleFilename:
-      mode === 'development'
-        ? 'images/[name][ext][query]'
-        : 'images/[hash][ext][query]',
+    assetModuleFilename: 'images/[hash][ext][query]',
+    // mode === 'development'
+    //   ? 'images/[hash][ext][query]'
+    //   : 'images/[hash][ext][query]',
   },
   devtool: 'source-map',
   plugins: [
@@ -49,7 +49,7 @@ module.exports = {
       {
         test: /\.css$/i,
         use: [
-          // (mode === 'development') ? "style-loader": MiniCssExtractPlugin.loader, "css-loader"
+          // (mode === 'development') ? 'style-loader' : MiniCssExtractPlugin.loader,
           MiniCssExtractPlugin.loader,
           'css-loader',
         ],
