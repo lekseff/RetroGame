@@ -206,16 +206,13 @@ export default class GamePlay {
   }
 
   showDamage(index, damage) {
-    console.log('Сработал метод showDamage');
+    // console.log('Сработал метод showDamage');
     return new Promise((resolve) => {
       const cell = this.cells[index];
       const damageEl = document.createElement('span');
       damageEl.textContent = damage;
       damageEl.classList.add('damage');
       cell.appendChild(damageEl);
-      //! Это моя строчка
-      damageEl.addEventListener('animationstart', () => console.log('Событие анимация началась'));
-      //
       damageEl.addEventListener('animationend', () => {
         cell.removeChild(damageEl);
         resolve();

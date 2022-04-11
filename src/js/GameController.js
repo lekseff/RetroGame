@@ -57,6 +57,7 @@ export default class GameController {
       return;
     }
 
+    // Ход. Клик в пустое поле
     if (gameState.selectedHero) {
       // Если поле есть в допустимых значениях и в нем нет героя
       if (gameState.availableSteps.includes(index) && !hero) {
@@ -67,17 +68,12 @@ export default class GameController {
         gameState.clear();
         // Передача хода
         this.nextPlayer();
-        this.gamePlay.redrawPositions(gameState.teams);
+        // this.gamePlay.redrawPositions(gameState.teams);
       }
-
+      // Если в поле есть противник
       if (hero && hero.character.player === 'computer' && gameState.availableAttack.includes(index)) {
         console.log('Атака Ура!');
-        this.attack(gameState.selectedHero.character, hero.character, index).then(() => {
-          console.log('Анимация прошла');
-          this.gamePlay.redrawPositions(gameState.teams);
-          // Передача хода
-          this.nextPlayer();
-        });
+        this.attack(hero, gameState.selectedHero, index);
         // Снимаем выделение с атакуемого и атакующего персонажа
         this.gamePlay.deselectCell(index);
         this.gamePlay.deselectCell(gameState.selectedHero.position);
@@ -140,8 +136,7 @@ export default class GameController {
     // TODO: react to mouse leave
     // console.log('onCellLeave сработал -', index);
     this.gamePlay.hideCellTooltip(index);
-    // Временно сделал так, чтобы не убиралось выделение активного игрока
-    // ! Не убирается выделение с ячейки атаки, если она не входит в поле хода
+    // Чтобы не убиралось выделение активного игрока
     if (gameState.selectedHero && gameState.availableSteps.includes(index)) {
       this.gamePlay.deselectCell(index);
     }
@@ -164,53 +159,56 @@ export default class GameController {
     }
   }
 
-  attack(attacker, attacked, indexAttacked) {
-    // console.log('Метод атака');
-    // // Значение атаки атакующего персонажа
-    // const { attack } = attacker;
-    // // Значение защиты атакуемого
-    // const { defense } = attacked;
-    // // Урон от атаки
-    // const damage = Math.max((attack - defense, attack * 0.1));
-    // console.log('damage', damage);
-    // // Проверка убит ли персонаж
-    // // eslint-disable-next-line no-param-reassign
-    // attacked.health -= damage;
-    // if (attacked.health <= 0) {
-    //   gameState.removeHero(indexAttacked);
-    // }
+  async attack(attacked, attacker, indexAttacked) {
+    console.log('Метод атака');
+    // Значение атаки атакующего персонажа
+    const { attack } = attacker.character;
+    // Значение защиты атакуемого
+    const { defense } = attacked.character;
+    // Урон от атаки
+    const damage = Math.max((attack - defense, attack * 0.1));
+    // eslint-disable-next-line no-param-reassign
+    attacked.character.health -= damage;
+    // Проверка убит ли герой
+    if (attacked.character.health <= 0) {
+      gameState.removeHero(indexAttacked);
+    }
+    // выделяем атакующего и атакуемого героя
+    this.gamePlay.selectCell(attacker.position);
+    this.gamePlay.selectCell(attacked.position, 'red');
+    this.gamePlay.redrawPositions(gameState.teams);
     // Отображаем уровень урона анимацией
-    // this.gamePlay.showDamage(indexAttacked, damage).then(() => {
+    await this.gamePlay.showDamage(indexAttacked, damage);
+    console.log('После анимации');
+    // Снимаем выделение с атакующего и атакуемого героя
+    this.gamePlay.deselectCell(attacker.position);
+    this.gamePlay.deselectCell(attacked.position);
+    this.nextPlayer();
   }
 
   computerLogic() {
-    // const { teams } = gameState;
-    // const computerTeams = teams.filter((member) => member.character.player === 'computer');
-    // const userTeams = teams.filter((member) => member.character.player === 'user');
-    // const attacks = computerTeams.some((compUnit) => {
-    // // eslint-disable-next-line max-len
-    //   gameState.availableAttack = getAvailableAttack(compUnit.position, compUnit.character.attackRadius);
-    //   // gameState.selectedHero = compUnit.position;
-    //   const attacked = userTeams.find((userUnit) => gameState.availableAttack.includes(userUnit.position));
-    //   if (attacked) {
-    //     console.log(compUnit, ' - может атаковать - ', attacked);
-    //     this.attack(compUnit.character, attacked.character, attacked.position).then(() => {
-    //       console.log('Анимация прошла');
-    //       this.gamePlay.redrawPositions(gameState.teams);
-    //       // Передача хода
-    //       this.nextPlayer();
-    //     });
-    //     return true;
-    //   }
-    //   return false;
-    // });
-
-    // if (!attacks) {
-    //   console.log('Некого атаковать');
-    //   computerTeams[0].position += 1;
-    //   this.nextPlayer();
-    //   this.gamePlay.redrawPositions(gameState.teams);
-    // }
+    const { teams } = gameState;
+    const computerTeams = teams.filter((member) => member.character.player === 'computer');
+    const userTeams = teams.filter((member) => member.character.player === 'user');
+    // Проверяем возможность атаки
+    const attack = computerTeams.some((compUnit) => {
+    // eslint-disable-next-line max-len
+      gameState.availableAttack = getAvailableAttack(compUnit.position, compUnit.character.attackRadius);
+      const attacked = userTeams.find((userUnit) => gameState.availableAttack.includes(userUnit.position));
+      if (attacked) {
+        // console.log(compUnit, ' - может атаковать - ', attacked);
+        this.attack(attacked, compUnit, attacked.position);
+        return true;
+      }
+      return false;
+    });
+    // Временный вариант, чтоб ходил хоть куда-то
+    if (!attack) {
+      console.log('Некого атаковать. Переход хода!');
+      computerTeams[0].position += 1;
+      this.nextPlayer();
+      this.gamePlay.redrawPositions(gameState.teams);
+    }
   }
 
   /**
