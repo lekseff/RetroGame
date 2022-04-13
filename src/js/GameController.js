@@ -12,16 +12,14 @@ import Undead from './Heroes/Undead';
 import Vampire from './Heroes/Vampire';
 import {
   generateTeam,
-  characterGenerator,
   startFieldGenerator,
   getAvailableDistance,
   getAvailableAttack,
 } from './generators';
 
-const gameState = new GameState(2, [], 'user');
+const gameState = new GameState(1, [], 'user');
 const userTypes = [Swordsman, Bowman, Magician];
 const computerTypes = [Daemon, Undead, Vampire];
-// let prevSelectedHero = null;
 
 export default class GameController {
   constructor(gamePlay, stateService) {
@@ -31,7 +29,7 @@ export default class GameController {
 
   init() {
     // TODO: add event listeners to gamePlay events
-    this.gamePlay.drawUi(Object.values(themes)[gameState.stage - 1]);
+    // this.gamePlay.drawUi(Object.values(themes)[gameState.stage - 1]);
     this.startGame();
     // TODO: load saved stated from stateService
   }
@@ -50,9 +48,7 @@ export default class GameController {
       this.gamePlay.selectCell(index);
       gameState.availableSteps = getAvailableDistance(index, hero.character.stepsRadius);
       gameState.availableAttack = getAvailableAttack(index, hero.character.attackRadius);
-      // gameState.selected = true;
       gameState.selectedHero = hero;
-      // prevSelectedHero = index;
       // console.log('После первого клика: ', gameState);
       return;
     }
@@ -64,11 +60,8 @@ export default class GameController {
         this.gamePlay.deselectCell(gameState.selectedHero.position);
         gameState.selectedHero.position = index;
         this.gamePlay.deselectCell(index);
-        // gameState.selected = false;
-        gameState.clear();
         // Передача хода
-        this.nextPlayer();
-        // this.gamePlay.redrawPositions(gameState.teams);
+        this.checkLevel();
       }
       // Если в поле есть противник
       if (hero && hero.character.player === 'computer' && gameState.availableAttack.includes(index)) {
@@ -77,9 +70,7 @@ export default class GameController {
         // Снимаем выделение с атакуемого и атакующего персонажа
         this.gamePlay.deselectCell(index);
         this.gamePlay.deselectCell(gameState.selectedHero.position);
-        // gameState.selected = false;
-        gameState.clear();
-        console.log('После атаки: ', gameState);
+        // console.log('После атаки: ', gameState);
       }
     }
     // Чтоб не мешали сообщения об ошибке
@@ -137,18 +128,18 @@ export default class GameController {
     // console.log('onCellLeave сработал -', index);
     this.gamePlay.hideCellTooltip(index);
     // Чтобы не убиралось выделение активного игрока
-    if (gameState.selectedHero && gameState.availableSteps.includes(index)) {
+    // if (gameState.selectedHero && gameState.availableAttack.includes(index)) {
+    //   this.gamePlay.deselectCell(index);
+    // }
+    if (gameState.selectedHero && (gameState.selectedHero.position !== index)) {
       this.gamePlay.deselectCell(index);
     }
   }
 
   startGame() {
-    this.teamGeneration(userTypes, 'user');
-    this.teamGeneration(computerTypes, 'computer');
-    // Отображаем сгенерированную команду
-    this.gamePlay.redrawPositions(gameState.teams);
     // Проверка событий на ячейках
     this.checkCell();
+    this.nextStage(gameState.stage);
   }
 
   nextPlayer() {
@@ -157,16 +148,64 @@ export default class GameController {
     if (gameState.motion === 'computer') {
       this.computerLogic();
     }
+    gameState.clear();
+  }
+
+  checkLevel() {
+    const userValue = gameState.teams.some((member) => member.character.player === 'user');
+    const computerValue = gameState.teams.some((member) => member.character.player === 'computer');
+    if (userValue && computerValue) {
+      this.nextPlayer();
+      return;
+    }
+    if (!computerValue) {
+      console.warn('-= Победа! =-');
+      gameState.clear();
+      this.nextStage(gameState.stage += 1);
+    }
+    if (!userValue) {
+      console.warn('-= Враг оказался сильнее((( =-');
+    }
+  }
+
+  nextStage(stage) {
+    console.warn('Переход на следующий уровень');
+    if (stage === 1) {
+      console.warn(`Уровень ${stage}`);
+      this.teamGeneration(userTypes, 'user', 1, 2);
+      this.teamGeneration(computerTypes, 'computer', 1, 2);
+    }
+    //
+    if (stage > 1 && stage < 5) {
+      console.warn(`Уровень ${stage}`);
+      // Повышаем уровень оставшихся
+      gameState.teams.forEach((member) => member.character.levelUp());
+      // + к команде user
+      const count = (stage === 2) ? 1 : 2;
+      this.teamGeneration(userTypes, 'user', stage - 1, count);
+      // новая команда компа
+      const userCount = gameState.teams.filter((member) => member.character.player === 'user').length;
+      this.teamGeneration(computerTypes, 'computer', stage, userCount);
+      // console.log(`Уровень ${stage}`, gameState.teams);
+    }
+    //
+    if (stage >= 5) {
+      alert('Победа! Игра окончена');
+    } else {
+      this.gamePlay.drawUi(Object.values(themes)[gameState.stage - 1]);
+      this.gamePlay.redrawPositions(gameState.teams);
+    }
   }
 
   async attack(attacked, attacker, indexAttacked) {
-    console.log('Метод атака');
+    // console.log('Метод атака');
     // Значение атаки атакующего персонажа
     const { attack } = attacker.character;
     // Значение защиты атакуемого
     const { defense } = attacked.character;
     // Урон от атаки
-    const damage = Math.max((attack - defense, attack * 0.1));
+    const damage = Math.round(Math.max((attack - defense, attack * 0.1)));
+    // console.log('damage', damage);
     // eslint-disable-next-line no-param-reassign
     attacked.character.health -= damage;
     // Проверка убит ли герой
@@ -176,14 +215,16 @@ export default class GameController {
     // выделяем атакующего и атакуемого героя
     this.gamePlay.selectCell(attacker.position);
     this.gamePlay.selectCell(attacked.position, 'red');
+    // Обновляем поле
     this.gamePlay.redrawPositions(gameState.teams);
     // Отображаем уровень урона анимацией
     await this.gamePlay.showDamage(indexAttacked, damage);
-    console.log('После анимации');
+    // console.log('После анимации');
     // Снимаем выделение с атакующего и атакуемого героя
     this.gamePlay.deselectCell(attacker.position);
     this.gamePlay.deselectCell(attacked.position);
-    this.nextPlayer();
+    // this.nextPlayer();
+    this.checkLevel();
   }
 
   computerLogic() {
@@ -203,10 +244,14 @@ export default class GameController {
       return false;
     });
     // Временный вариант, чтоб ходил хоть куда-то
-    if (!attack) {
+    if (!attack && computerTeams.length && userTeams.length) {
       console.log('Некого атаковать. Переход хода!');
-      computerTeams[0].position += 1;
-      this.nextPlayer();
+      const unit = Math.floor(Math.random() * computerTeams.length);
+      const steps = getAvailableDistance(computerTeams[unit].position, computerTeams[unit].character.stepsRadius);
+      const step = Math.floor(Math.random() * steps.length);
+      computerTeams[unit].position = steps[step];
+      // this.nextPlayer();
+      this.checkLevel();
       this.gamePlay.redrawPositions(gameState.teams);
     }
   }
@@ -217,9 +262,9 @@ export default class GameController {
    * @param {*} prayer - Тип игрока 'user' или 'computer'
    * @returns - Массив объектов типа PositionedCharacter
    */
-  teamGeneration(teamType, prayer) {
+  teamGeneration(teamType, prayer, maxLevel, count) {
     // ? Переделать логику т.к теперь все одном массиве. Пока так
-    let newTeam = generateTeam(teamType, 1, 2);
+    let newTeam = generateTeam(teamType, maxLevel, count);
     newTeam = newTeam.toArray.reduce((acc, member) => {
       let randomNumber = startFieldGenerator(prayer);
       // Проверяем не занята ли ячейка(есть косяк с повтором, нужно сделать постоянную проверку)
@@ -229,7 +274,6 @@ export default class GameController {
       acc.push(new PositionedCharacter(member, randomNumber));
       return acc;
     }, []);
-    // return newTeam;
     gameState.teams.push(...newTeam);
   }
 }

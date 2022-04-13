@@ -3,8 +3,7 @@ export default class Character {
     this.level = level;
     this.attack = 0;
     this.defence = 0;
-    // this.health = 50;
-    this.health = 20;
+    this.health = 10;
     this.type = type;
     this.player = player;
     this.stepsRadius = stepsRadius;

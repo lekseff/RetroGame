@@ -16,7 +16,6 @@ export default class GameState {
     this.teams = teams; // Команда
     this.motion = motion; // Очередь хода
     this.point = point ?? 0; // Количество очков
-    // this.selected = false; // Статус выбран игрок или нет
     this.availableSteps = null; // Доступные после выбора варианты хода
     this.availableAttack = null; // Доступные после выбора варианты атаки
     this.selectedHero = null; // Выбранный персонаж

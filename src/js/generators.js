@@ -1,4 +1,5 @@
 import Team from './Team';
+
 /**
  * Generates random characters
  *
@@ -9,7 +10,7 @@ import Team from './Team';
 export function characterGenerator(allowedTypes, maxLevel) {
   // TODO: write logic here
   const randomType = Math.floor(Math.random() * allowedTypes.length);
-  const randomLevel = Math.floor(1 + Math.random() * maxLevel);
+  const randomLevel = Math.floor(Math.random() * maxLevel) + 1;
   return new allowedTypes[randomType](randomLevel, allowedTypes[randomType]);
 }
 
