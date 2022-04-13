@@ -161,6 +161,7 @@ export default class GameController {
     if (!computerValue) {
       console.warn('-= Победа! =-');
       gameState.clear();
+      gameState.addScores();
       this.nextStage(gameState.stage += 1);
     }
     if (!userValue) {
@@ -190,11 +191,12 @@ export default class GameController {
     }
     //
     if (stage >= 5) {
-      alert('Победа! Игра окончена');
+      alert(`Победа! Игра окончена. Счет: ${gameState.scores}`);
     } else {
       this.gamePlay.drawUi(Object.values(themes)[gameState.stage - 1]);
       this.gamePlay.redrawPositions(gameState.teams);
     }
+    console.log(gameState);
   }
 
   async attack(attacked, attacker, indexAttacked) {
