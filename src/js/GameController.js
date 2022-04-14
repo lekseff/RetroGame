@@ -17,7 +17,9 @@ import {
   getAvailableAttack,
 } from './generators';
 
-const gameState = new GameState(1, [], 'user');
+// const gameState = new GameState(1, [], 'user');
+let gameState = null;
+
 const userTypes = [Swordsman, Bowman, Magician];
 const computerTypes = [Daemon, Undead, Vampire];
 
@@ -29,15 +31,22 @@ export default class GameController {
 
   init() {
     // TODO: add event listeners to gamePlay events
-    // this.gamePlay.drawUi(Object.values(themes)[gameState.stage - 1]);
-    this.startGame();
     // TODO: load saved stated from stateService
+    this.loadGame();
+    this.checkCell();
   }
 
   checkCell() {
+    // События ячеек
     this.gamePlay.addCellEnterListener(this.onCellEnter.bind(this));
     this.gamePlay.addCellLeaveListener(this.onCellLeave.bind(this));
     this.gamePlay.addCellClickListener(this.onCellClick.bind(this));
+    // Сохранение
+    this.gamePlay.addSaveGameListener(this.saveGame.bind(this));
+    // Загрузка
+    this.gamePlay.addLoadGameListener(this.loadGame.bind(this));
+    // Новая игра
+    this.gamePlay.addNewGameListener(this.newGame.bind(this));
   }
 
   onCellClick(index) {
@@ -136,12 +145,43 @@ export default class GameController {
     }
   }
 
-  startGame() {
-    // Проверка событий на ячейках
-    this.checkCell();
+  /**
+   * Сохраняет состояние игры
+   */
+  saveGame() {
+    console.warn('Сохранили');
+    this.stateService.save(gameState);
+  }
+
+  /**
+   * Загрузка сохраненной игры, если такая есть
+   */
+  loadGame() {
+    console.warn('Загрузка');
+    const load = this.stateService.load();
+    if (load) {
+      console.warn('Загружено из загрузки');
+      gameState = GameState.from(load);
+      this.gamePlay.drawUi(Object.values(themes)[gameState.stage - 1]);
+      this.gamePlay.redrawPositions(gameState.teams);
+    } else {
+      console.warn('Ошибка загрузки. Новая игра');
+      this.newGame();
+    }
+  }
+
+  /**
+   * Новая игра сначала
+   */
+  newGame() {
+    console.warn('Новая игра/Ошибка загрузки сохраненной');
+    gameState = new GameState(1, [], 'user');
     this.nextStage(gameState.stage);
   }
 
+  /**
+   * Переход хода
+   */
   nextPlayer() {
     gameState.motion = (gameState.motion === 'user') ? 'computer' : 'user';
     console.log('Ход переходит к:', gameState.motion);
@@ -151,6 +191,9 @@ export default class GameController {
     gameState.clear();
   }
 
+  /**
+   * Проверка окончания уровня
+   */
   checkLevel() {
     const userValue = gameState.teams.some((member) => member.character.player === 'user');
     const computerValue = gameState.teams.some((member) => member.character.player === 'computer');
@@ -169,6 +212,10 @@ export default class GameController {
     }
   }
 
+  /**
+   * Переход на следующий уровень
+   * @param {number} stage - Номер уровня
+   */
   nextStage(stage) {
     console.warn('Переход на следующий уровень');
     if (stage === 1) {
@@ -196,9 +243,12 @@ export default class GameController {
       this.gamePlay.drawUi(Object.values(themes)[gameState.stage - 1]);
       this.gamePlay.redrawPositions(gameState.teams);
     }
-    console.log(gameState);
+    // console.log(gameState);
   }
 
+  /**
+   * Атака, расчет, выделение, удаление погибшего героя
+   */
   async attack(attacked, attacker, indexAttacked) {
     // console.log('Метод атака');
     // Значение атаки атакующего персонажа
@@ -229,6 +279,9 @@ export default class GameController {
     this.checkLevel();
   }
 
+  /**
+   * Логика хода и атаки компьютера
+   */
   computerLogic() {
     const { teams } = gameState;
     const computerTeams = teams.filter((member) => member.character.player === 'computer');
