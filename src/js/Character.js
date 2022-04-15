@@ -14,9 +14,9 @@ export default class Character {
     }
   }
 
-  levelUp() {
-    this.level += 1;
-    this.health = this.health + 80 >= 100 ? 100 : this.health + 80;
-    this.attack = Math.floor(Math.max(this.attack, this.attack * (0.8 + this.health / 100)));
-  }
+  // levelUp() {
+  //   this.level += 1;
+  //   this.health = this.health + 80 >= 100 ? 100 : this.health + 80;
+  //   this.attack = Math.floor(Math.max(this.attack, this.attack * (0.8 + this.health / 100)));
+  // }
 }

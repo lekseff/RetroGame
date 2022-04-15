@@ -37,7 +37,7 @@ export default class GameController {
   }
 
   checkCell() {
-    // События ячеек
+    // События
     this.gamePlay.addCellEnterListener(this.onCellEnter.bind(this));
     this.gamePlay.addCellLeaveListener(this.onCellLeave.bind(this));
     this.gamePlay.addCellClickListener(this.onCellClick.bind(this));
@@ -146,7 +146,7 @@ export default class GameController {
   }
 
   /**
-   * Сохраняет состояние игры
+   * Сохранение игры
    */
   saveGame() {
     console.warn('Сохранили');
@@ -160,8 +160,9 @@ export default class GameController {
     console.warn('Загрузка');
     const load = this.stateService.load();
     if (load) {
-      console.warn('Загружено из загрузки');
+      // console.warn('Загружено из загрузки', gameState);
       gameState = GameState.from(load);
+      console.warn('Загружено из загрузки', gameState);
       this.gamePlay.drawUi(Object.values(themes)[gameState.stage - 1]);
       this.gamePlay.redrawPositions(gameState.teams);
     } else {
@@ -176,6 +177,7 @@ export default class GameController {
   newGame() {
     console.warn('Новая игра/Ошибка загрузки сохраненной');
     gameState = new GameState(1, [], 'user');
+    console.log('Новая игра', gameState);
     this.nextStage(gameState.stage);
   }
 
@@ -189,6 +191,18 @@ export default class GameController {
       this.computerLogic();
     }
     gameState.clear();
+  }
+
+  /**
+   * Повышаем уровень членов команды
+   */
+  levelUp() {
+    gameState.teams.forEach((member) => {
+      const parameter = member.character;
+      parameter.level += 1;
+      parameter.health = parameter.health + 80 >= 100 ? 100 : parameter.health + 80;
+      parameter.attack = Math.floor(Math.max(parameter.attack, parameter.attack * (0.8 + parameter.attack / 100)));
+    });
   }
 
   /**
@@ -227,7 +241,8 @@ export default class GameController {
     if (stage > 1 && stage < 5) {
       console.warn(`Уровень ${stage}`);
       // Повышаем уровень оставшихся
-      gameState.teams.forEach((member) => member.character.levelUp());
+      // gameState.teams.forEach((member) => member.character.levelUp());
+      this.levelUp();
       // + к команде user
       const count = (stage === 2) ? 1 : 2;
       this.teamGeneration(userTypes, 'user', stage - 1, count);
