@@ -80,7 +80,8 @@ export default class GameController {
       }
       // Сообщение
       if (hero && hero.character.player === 'computer' && !gameState.availableAttack.includes(index)) {
-        GamePlay.showMessage('Он слишком далеко! Нужно подойти ближе');
+        // GamePlay.showMessage('Он слишком далеко! Нужно подойти ближе');
+        this.gamePlay.showPopup('Он слишком далеко! Нужно подойти ближе');
       }
       return;
     }
@@ -88,11 +89,13 @@ export default class GameController {
     if (!gameState.selectedHero && hero && hero.character.player === 'computer') {
       let { type } = hero.character;
       type = type[0].toUpperCase() + type.slice(1);
-      GamePlay.showError(`Это ${type}! Он явно не из наших!`);
+      // GamePlay.showError(`Это ${type}! Он явно не из наших!`);
+      this.gamePlay.showPopup(`Это ${type}! Он явно не из наших!`);
     }
 
     if (!gameState.selectedHero && !hero) {
-      GamePlay.showError('Тут никого нет');
+      // GamePlay.showError('Тут никого нет');
+      this.gamePlay.showPopup('Тут никого нет');
     }
   }
 
@@ -151,7 +154,8 @@ export default class GameController {
   saveGame() {
     // console.warn('Сохранили');
     this.stateService.save(gameState);
-    GamePlay.showMessage('Игра сохранена');
+    // GamePlay.showMessage('Игра сохранена');
+    this.gamePlay.showPopup('Игра сохранена');
   }
 
   /**
@@ -222,13 +226,15 @@ export default class GameController {
       return;
     }
     if (!computerValue) {
-      GamePlay.showMessage('Враг повержен!');
+      // GamePlay.showMessage('Враг повержен!');
+      // this.gamePlay.showPopup('Враг повержен!');
       gameState.clear();
       gameState.addScores();
       this.nextStage(gameState.stage += 1);
     }
     if (!userValue) {
-      GamePlay.showMessage('Враг оказался хитрее и сильнее(((');
+      // GamePlay.showMessage('Враг оказался хитрее и сильнее(((');
+      this.gamePlay.showPopup('Враг оказался хитрее и сильнее(((');
     }
   }
 
@@ -245,8 +251,6 @@ export default class GameController {
     }
     //
     if (stage > 1 && stage < 5) {
-      // console.warn(`Уровень ${stage}`);
-      GamePlay.showMessage(`Уровень ${stage} \n Счет: ${gameState.scores}`);
       // Повышаем уровень оставшихся
       this.levelUp();
       // + к команде user
@@ -256,14 +260,17 @@ export default class GameController {
       const userCount = gameState.teams.filter((member) => member.character.player === 'user').length;
       GameController.teamGeneration(computerTypes, 'computer', stage, userCount);
     }
+
     //
     if (stage >= 5) {
       // Блокировка поля
       this.gamePlay.cellClickListeners.length = 0;
-      GamePlay.showMessage(`Победа! Игра окончена. Счет: ${gameState.scores}`);
+      // GamePlay.showMessage(`Победа! Игра окончена. Счет: ${gameState.scores}`);
+      this.gamePlay.showPopup(`Победа! Игра окончена. Счет: ${gameState.scores}`);
     } else {
       this.gamePlay.drawUi(Object.values(themes)[gameState.stage - 1]);
       this.gamePlay.redrawPositions(gameState.teams);
+      this.gamePlay.showPopup(`Уровень ${stage} Счет: ${gameState.scores}`);
     }
   }
 

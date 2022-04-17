@@ -7,6 +7,7 @@ import GameStateService from './GameStateService';
 
 const gamePlay = new GamePlay();
 gamePlay.bindToDOM(document.querySelector('#game-container'));
+gamePlay.bindPopup(document.querySelector('#popup'));
 
 const stateService = new GameStateService(localStorage);
 

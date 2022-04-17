@@ -4,6 +4,7 @@ export default class GamePlay {
   constructor() {
     this.boardSize = 8;
     this.container = null;
+    this.popup = null;
     this.boardEl = null; // Поле
     this.cells = []; // Элементы поля
     this.cellClickListeners = [];
@@ -19,6 +20,13 @@ export default class GamePlay {
       throw new Error('container is not HTMLElement');
     }
     this.container = container;
+  }
+
+  bindPopup(popup) {
+    if (!(popup instanceof HTMLElement)) {
+      throw new Error('container is not HTMLElement');
+    }
+    this.popup = popup;
   }
 
   /**
@@ -40,13 +48,22 @@ export default class GamePlay {
       </div>
     `;
 
+    this.popup.innerHTML = `
+      <div class="popup__window">
+          <p class="popup__title"></p>
+          <button class="popup__button">Закрыть</button>
+      </div>
+    `;
+
     this.newGameEl = this.container.querySelector('[data-id=action-restart]');
     this.saveGameEl = this.container.querySelector('[data-id=action-save]');
     this.loadGameEl = this.container.querySelector('[data-id=action-load]');
+    this.popupCloseButton = this.popup.querySelector('.popup__button');
 
     this.newGameEl.addEventListener('click', (event) => this.onNewGameClick(event));
     this.saveGameEl.addEventListener('click', (event) => this.onSaveGameClick(event));
     this.loadGameEl.addEventListener('click', (event) => this.onLoadGameClick(event));
+    this.popupCloseButton.addEventListener('click', () => this.closePopup());
 
     this.boardEl = this.container.querySelector('[data-id=board]');
 
@@ -228,5 +245,17 @@ export default class GamePlay {
     if (this.container === null) {
       throw new Error('GamePlay not bind to DOM');
     }
+  }
+
+  // Закрывает Popup
+  closePopup() {
+    this.popup.classList.add('popup_hidden');
+  }
+
+  // Показывает Popup
+  showPopup(message) {
+    const title = this.popup.querySelector('.popup__title');
+    title.textContent = message;
+    this.popup.classList.remove('popup_hidden');
   }
 }
