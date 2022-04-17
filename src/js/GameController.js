@@ -18,8 +18,10 @@ import {
   getAvailableAttack,
 } from './generators';
 
+// Актуальное состояние игры
 let gameState = null;
 
+// Типы персонажей пользователей
 const userTypes = [Swordsman, Bowman, Magician];
 const computerTypes = [Daemon, Undead, Vampire];
 
@@ -118,15 +120,16 @@ export default class GameController {
       this.gamePlay.setCursor(cursors.auto);
     }
 
-    // Изменение курсора при выделенном герое
+    // Изменение типа курсора при выделенном герое
     if (gameState.selectedHero) {
-      // Выделение зеленым если доступно поле для хода и нет никакого героя
       if (gameState.availableSteps.includes(index) && !hero) {
         this.gamePlay.setCursor(cursors.pointer);
         this.gamePlay.selectCell(index, 'green');
       } else if (hero && hero.character.player === 'computer' && gameState.availableAttack.includes(index)) {
         this.gamePlay.setCursor(cursors.crosshair);
         this.gamePlay.selectCell(index, 'red');
+      } else if (hero && hero.character.player === 'user') {
+        this.gamePlay.setCursor(cursors.pointer);
       } else {
         this.gamePlay.setCursor(cursors.notallowed);
       }
@@ -146,8 +149,9 @@ export default class GameController {
    * Сохранение игры
    */
   saveGame() {
-    console.warn('Сохранили');
+    // console.warn('Сохранили');
     this.stateService.save(gameState);
+    GamePlay.showMessage('Игра сохранена');
   }
 
   /**
@@ -162,7 +166,6 @@ export default class GameController {
     const load = this.stateService.load();
     if (load) {
       gameState = GameState.from(load);
-      console.warn('Загружено из загрузки', gameState);
       this.gamePlay.drawUi(Object.values(themes)[gameState.stage - 1]);
       this.gamePlay.redrawPositions(gameState.teams);
     } else {
@@ -237,8 +240,8 @@ export default class GameController {
     // console.warn('Переход на следующий уровень');
     if (stage === 1) {
       // console.warn(`Уровень ${stage}`);
-      this.teamGeneration(userTypes, 'user', 1, 2);
-      this.teamGeneration(computerTypes, 'computer', 1, 2);
+      GameController.teamGeneration(userTypes, 'user', 1, 2);
+      GameController.teamGeneration(computerTypes, 'computer', 1, 2);
     }
     //
     if (stage > 1 && stage < 5) {
@@ -248,10 +251,10 @@ export default class GameController {
       this.levelUp();
       // + к команде user
       const count = (stage === 2) ? 1 : 2;
-      this.teamGeneration(userTypes, 'user', stage - 1, count);
+      GameController.teamGeneration(userTypes, 'user', stage - 1, count);
       // новая команда компа
       const userCount = gameState.teams.filter((member) => member.character.player === 'user').length;
-      this.teamGeneration(computerTypes, 'computer', stage, userCount);
+      GameController.teamGeneration(computerTypes, 'computer', stage, userCount);
     }
     //
     if (stage >= 5) {
@@ -332,15 +335,23 @@ export default class GameController {
    * @param {*} prayer - Тип игрока 'user' или 'computer'
    * @returns - Массив объектов типа PositionedCharacter
    */
-  teamGeneration(teamType, prayer, maxLevel, count) {
-    // ? Переделать логику т.к теперь все одном массиве. Пока так
+  static teamGeneration(teamType, prayer, maxLevel, count) {
+    // Генерируем новую команду
     let newTeam = generateTeam(teamType, maxLevel, count);
+    // Список занятых на поле позиций
+    const positionList = [];
+    if (gameState.teams.length) {
+      gameState.teams.forEach((elem) => positionList.push(elem.position));
+    }
+    // Добавляем позиции новым персонажам
     newTeam = newTeam.toArray.reduce((acc, member) => {
+      // Случайная позиция персонажа из списка доступных
       let randomNumber = startFieldGenerator(prayer);
-      // Проверяем не занята ли ячейка(есть косяк с повтором, нужно сделать постоянную проверку)
-      if (acc.some((elem) => elem.position === randomNumber)) {
+      // Если есть такая позиция уже есть генерируем новую
+      while (positionList.includes(randomNumber)) {
         randomNumber = startFieldGenerator(prayer);
       }
+      positionList.push(randomNumber);
       acc.push(new PositionedCharacter(member, randomNumber));
       return acc;
     }, []);
