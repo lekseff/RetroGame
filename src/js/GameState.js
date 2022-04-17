@@ -1,21 +1,20 @@
 export default class GameState {
   static from(object) {
     // TODO: create object
-    // return null;
     const {
       stage,
       teams,
       motion,
-      point,
+      scores,
     } = object;
-    return new GameState(stage, teams, motion, point);
+    return new GameState(stage, teams, motion, scores);
   }
 
   constructor(stage, teams, motion, scores) {
     this.stage = stage; // Уровень игры
     this.teams = teams; // Команда
     this.motion = motion; // Очередь хода
-    this.scores = scores ?? 0; // Количество очков
+    this.scores = scores || 0; // Количество очков
     this.availableSteps = null; // Доступные после выбора варианты хода
     this.availableAttack = null; // Доступные после выбора варианты атаки
     this.selectedHero = null; // Выбранный персонаж
@@ -49,7 +48,7 @@ export default class GameState {
       return acc;
     }, 0);
     this.scores += sum;
-    console.log('Добавлено: ', sum);
-    console.log('Итого: ', this.scores);
+    // console.log('Добавлено: ', sum);
+    // console.log('Итого: ', this.scores);
   }
 }

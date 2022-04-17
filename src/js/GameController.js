@@ -2,6 +2,7 @@
 /* eslint-disable class-methods-use-this */
 import themes from './themes';
 import cursors from './cursors';
+import GamePlay from './GamePlay';
 import GameState from './GameState';
 import PositionedCharacter from './PositionedCharacter';
 import Bowman from './Heroes/Bowman';
@@ -17,7 +18,6 @@ import {
   getAvailableAttack,
 } from './generators';
 
-// const gameState = new GameState(1, [], 'user');
 let gameState = null;
 
 const userTypes = [Swordsman, Bowman, Magician];
@@ -33,7 +33,6 @@ export default class GameController {
     // TODO: add event listeners to gamePlay events
     // TODO: load saved stated from stateService
     this.loadGame();
-    this.checkCell();
   }
 
   checkCell() {
@@ -69,28 +68,30 @@ export default class GameController {
         this.gamePlay.deselectCell(gameState.selectedHero.position);
         gameState.selectedHero.position = index;
         this.gamePlay.deselectCell(index);
-        // Передача хода
+        // Проверка окончания уровня и передача хода
         this.checkLevel();
       }
-      // Если в поле есть противник
+      // Если в поле есть противник атакуем
       if (hero && hero.character.player === 'computer' && gameState.availableAttack.includes(index)) {
-        console.log('Атака Ура!');
+        // console.log('Атака Ура!');
         this.attack(hero, gameState.selectedHero, index);
-        // Снимаем выделение с атакуемого и атакующего персонажа
-        this.gamePlay.deselectCell(index);
-        this.gamePlay.deselectCell(gameState.selectedHero.position);
-        // console.log('После атаки: ', gameState);
       }
+      // Сообщение
+      if (hero && hero.character.player === 'computer' && !gameState.availableAttack.includes(index)) {
+        GamePlay.showMessage('Он слишком далеко! Нужно подойти ближе');
+      }
+      return;
     }
-    // Чтоб не мешали сообщения об ошибке
-    // if (hero && hero.character.player === 'user') {
-    //   this.gamePlay.selectCell(index);
-    // } else if (hero && hero.character.player === 'computer') {
-    //   GamePlay.showError('Это чужой игрок)');
-    // } else {
-    //   GamePlay.showError('Здесь никого нет)');
-    // }
-    // console.log('После второго клика: ', gameState);
+    // Сообщения об ошибке
+    if (!gameState.selectedHero && hero && hero.character.player === 'computer') {
+      let { type } = hero.character;
+      type = type[0].toUpperCase() + type.slice(1);
+      GamePlay.showError(`Это ${type}! Он явно не из наших!`);
+    }
+
+    if (!gameState.selectedHero && !hero) {
+      GamePlay.showError('Тут никого нет');
+    }
   }
 
   onCellEnter(index) {
@@ -123,23 +124,19 @@ export default class GameController {
       if (gameState.availableSteps.includes(index) && !hero) {
         this.gamePlay.setCursor(cursors.pointer);
         this.gamePlay.selectCell(index, 'green');
-      }
-      // Выделение красным, если в клетке есть герой доступный для атаки
-      if (hero && hero.character.player === 'computer' && gameState.availableAttack.includes(index)) {
+      } else if (hero && hero.character.player === 'computer' && gameState.availableAttack.includes(index)) {
         this.gamePlay.setCursor(cursors.crosshair);
         this.gamePlay.selectCell(index, 'red');
+      } else {
+        this.gamePlay.setCursor(cursors.notallowed);
       }
     }
   }
 
   onCellLeave(index) {
     // TODO: react to mouse leave
-    // console.log('onCellLeave сработал -', index);
     this.gamePlay.hideCellTooltip(index);
     // Чтобы не убиралось выделение активного игрока
-    // if (gameState.selectedHero && gameState.availableAttack.includes(index)) {
-    //   this.gamePlay.deselectCell(index);
-    // }
     if (gameState.selectedHero && (gameState.selectedHero.position !== index)) {
       this.gamePlay.deselectCell(index);
     }
@@ -158,15 +155,18 @@ export default class GameController {
    */
   loadGame() {
     console.warn('Загрузка');
+    // Чтобы не добавлялись лишние события при загрузке во время игры
+    if (this.gamePlay.cellClickListeners.length === 0) {
+      this.checkCell();
+    }
     const load = this.stateService.load();
     if (load) {
-      // console.warn('Загружено из загрузки', gameState);
       gameState = GameState.from(load);
       console.warn('Загружено из загрузки', gameState);
       this.gamePlay.drawUi(Object.values(themes)[gameState.stage - 1]);
       this.gamePlay.redrawPositions(gameState.teams);
     } else {
-      console.warn('Ошибка загрузки. Новая игра');
+      console.warn('Ошибка загрузки/Новая игра');
       this.newGame();
     }
   }
@@ -176,8 +176,11 @@ export default class GameController {
    */
   newGame() {
     console.warn('Новая игра/Ошибка загрузки сохраненной');
-    gameState = new GameState(1, [], 'user');
-    console.log('Новая игра', gameState);
+    if (this.gamePlay.cellClickListeners.length === 0) {
+      this.gamePlay.addCellClickListener(this.onCellClick.bind(this));
+    }
+    const totalScores = gameState ? gameState.scores : 0;
+    gameState = new GameState(1, [], 'user', totalScores);
     this.nextStage(gameState.stage);
   }
 
@@ -186,7 +189,7 @@ export default class GameController {
    */
   nextPlayer() {
     gameState.motion = (gameState.motion === 'user') ? 'computer' : 'user';
-    console.log('Ход переходит к:', gameState.motion);
+    // console.log('Ход переходит к:', gameState.motion);
     if (gameState.motion === 'computer') {
       this.computerLogic();
     }
@@ -201,7 +204,7 @@ export default class GameController {
       const parameter = member.character;
       parameter.level += 1;
       parameter.health = parameter.health + 80 >= 100 ? 100 : parameter.health + 80;
-      parameter.attack = Math.floor(Math.max(parameter.attack, parameter.attack * (0.8 + parameter.attack / 100)));
+      parameter.attack = Math.floor(Math.max(parameter.attack, parameter.attack * (0.8 + parameter.health / 100)));
     });
   }
 
@@ -216,13 +219,13 @@ export default class GameController {
       return;
     }
     if (!computerValue) {
-      console.warn('-= Победа! =-');
+      GamePlay.showMessage('Враг повержен!');
       gameState.clear();
       gameState.addScores();
       this.nextStage(gameState.stage += 1);
     }
     if (!userValue) {
-      console.warn('-= Враг оказался сильнее((( =-');
+      GamePlay.showMessage('Враг оказался хитрее и сильнее(((');
     }
   }
 
@@ -231,17 +234,17 @@ export default class GameController {
    * @param {number} stage - Номер уровня
    */
   nextStage(stage) {
-    console.warn('Переход на следующий уровень');
+    // console.warn('Переход на следующий уровень');
     if (stage === 1) {
-      console.warn(`Уровень ${stage}`);
+      // console.warn(`Уровень ${stage}`);
       this.teamGeneration(userTypes, 'user', 1, 2);
       this.teamGeneration(computerTypes, 'computer', 1, 2);
     }
     //
     if (stage > 1 && stage < 5) {
-      console.warn(`Уровень ${stage}`);
+      // console.warn(`Уровень ${stage}`);
+      GamePlay.showMessage(`Уровень ${stage} \n Счет: ${gameState.scores}`);
       // Повышаем уровень оставшихся
-      // gameState.teams.forEach((member) => member.character.levelUp());
       this.levelUp();
       // + к команде user
       const count = (stage === 2) ? 1 : 2;
@@ -249,48 +252,47 @@ export default class GameController {
       // новая команда компа
       const userCount = gameState.teams.filter((member) => member.character.player === 'user').length;
       this.teamGeneration(computerTypes, 'computer', stage, userCount);
-      // console.log(`Уровень ${stage}`, gameState.teams);
     }
     //
     if (stage >= 5) {
-      alert(`Победа! Игра окончена. Счет: ${gameState.scores}`);
+      // Блокировка поля
+      this.gamePlay.cellClickListeners.length = 0;
+      GamePlay.showMessage(`Победа! Игра окончена. Счет: ${gameState.scores}`);
     } else {
       this.gamePlay.drawUi(Object.values(themes)[gameState.stage - 1]);
       this.gamePlay.redrawPositions(gameState.teams);
     }
-    // console.log(gameState);
   }
 
   /**
    * Атака, расчет, выделение, удаление погибшего героя
    */
   async attack(attacked, attacker, indexAttacked) {
-    // console.log('Метод атака');
     // Значение атаки атакующего персонажа
     const { attack } = attacker.character;
     // Значение защиты атакуемого
     const { defense } = attacked.character;
+    // Атакуемый персонаж
+    const attackedUnit = attacked.character;
     // Урон от атаки
     const damage = Math.round(Math.max((attack - defense, attack * 0.1)));
-    // console.log('damage', damage);
-    // eslint-disable-next-line no-param-reassign
-    attacked.character.health -= damage;
+    attackedUnit.health -= damage;
     // Проверка убит ли герой
     if (attacked.character.health <= 0) {
       gameState.removeHero(indexAttacked);
     }
-    // выделяем атакующего и атакуемого героя
+    // Выделяем атакующего и атакуемого героя
     this.gamePlay.selectCell(attacker.position);
     this.gamePlay.selectCell(attacked.position, 'red');
     // Обновляем поле
     this.gamePlay.redrawPositions(gameState.teams);
+    // Чтобы не было выделения ячеек при анимации
+    gameState.selectedHero = null;
     // Отображаем уровень урона анимацией
     await this.gamePlay.showDamage(indexAttacked, damage);
-    // console.log('После анимации');
     // Снимаем выделение с атакующего и атакуемого героя
     this.gamePlay.deselectCell(attacker.position);
     this.gamePlay.deselectCell(attacked.position);
-    // this.nextPlayer();
     this.checkLevel();
   }
 
@@ -303,7 +305,6 @@ export default class GameController {
     const userTeams = teams.filter((member) => member.character.player === 'user');
     // Проверяем возможность атаки
     const attack = computerTeams.some((compUnit) => {
-    // eslint-disable-next-line max-len
       gameState.availableAttack = getAvailableAttack(compUnit.position, compUnit.character.attackRadius);
       const attacked = userTeams.find((userUnit) => gameState.availableAttack.includes(userUnit.position));
       if (attacked) {
@@ -315,12 +316,11 @@ export default class GameController {
     });
     // Временный вариант, чтоб ходил хоть куда-то
     if (!attack && computerTeams.length && userTeams.length) {
-      console.log('Некого атаковать. Переход хода!');
+      // console.log('Некого атаковать. Переход хода!');
       const unit = Math.floor(Math.random() * computerTeams.length);
       const steps = getAvailableDistance(computerTeams[unit].position, computerTeams[unit].character.stepsRadius);
       const step = Math.floor(Math.random() * steps.length);
       computerTeams[unit].position = steps[step];
-      // this.nextPlayer();
       this.checkLevel();
       this.gamePlay.redrawPositions(gameState.teams);
     }

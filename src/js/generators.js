@@ -154,5 +154,5 @@ export function getAvailableAttack(index, radius) {
     }
     startCell += 1;
   }
-  return [...allowableAttack].sort((a, b) => a - b);
+  return [...allowableAttack];
 }
