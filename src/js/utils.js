@@ -1,5 +1,4 @@
 export function calcTileType(index, boardSize) {
-  // TODO: write logic here
   switch (true) {
     case index === 0:
       return 'top-left';

@@ -48,7 +48,5 @@ export default class GameState {
       return acc;
     }, 0);
     this.scores += sum;
-    // console.log('Добавлено: ', sum);
-    // console.log('Итого: ', this.scores);
   }
 }

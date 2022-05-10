@@ -1,8 +1,7 @@
 /* eslint-disable max-len */
-/* eslint-disable class-methods-use-this */
 import themes from './themes';
 import cursors from './cursors';
-import GamePlay from './GamePlay';
+import side from './side';
 import GameState from './GameState';
 import PositionedCharacter from './PositionedCharacter';
 import Bowman from './Heroes/Bowman';
@@ -20,7 +19,6 @@ import {
 
 // Актуальное состояние игры
 let gameState = null;
-
 // Типы персонажей пользователей
 const userTypes = [Swordsman, Bowman, Magician];
 const computerTypes = [Daemon, Undead, Vampire];
@@ -31,9 +29,20 @@ export default class GameController {
     this.stateService = stateService;
   }
 
+  /**
+   * Повышает уровень членов команды
+   */
+  static levelUp() {
+    for (const member of gameState.teams) {
+      const parameter = member.character;
+      member.position = startFieldGenerator(side.USER); // Возвращаем игроков с свои поля
+      parameter.level += 1;
+      parameter.health = parameter.health + 80 >= 100 ? 100 : parameter.health + 80;
+      parameter.attack = Math.floor(Math.max(parameter.attack, parameter.attack * (0.8 + parameter.health / 100)));
+    }
+  }
+
   init() {
-    // TODO: add event listeners to gamePlay events
-    // TODO: load saved stated from stateService
     this.loadGame();
   }
 
@@ -53,7 +62,7 @@ export default class GameController {
   onCellClick(index) {
     // TODO: react to click
     const hero = gameState.teams.find((elem) => elem.position === index);
-    if (hero && hero.character.player === 'user') {
+    if (hero && hero.character.player === side.USER) {
       if (gameState.selectedHero) this.gamePlay.deselectCell(gameState.selectedHero.position);
       this.gamePlay.selectCell(index);
       gameState.availableSteps = getAvailableDistance(index, hero.character.stepsRadius);
@@ -74,28 +83,47 @@ export default class GameController {
         this.checkLevel();
       }
       // Если в поле есть противник атакуем
-      if (hero && hero.character.player === 'computer' && gameState.availableAttack.includes(index)) {
+      if (hero && hero.character.player === side.COMP && gameState.availableAttack.includes(index)) {
         // console.log('Атака Ура!');
         this.attack(hero, gameState.selectedHero, index);
       }
       // Сообщение
-      if (hero && hero.character.player === 'computer' && !gameState.availableAttack.includes(index)) {
+      if (hero && hero.character.player === side.COMP && !gameState.availableAttack.includes(index)) {
         // GamePlay.showMessage('Он слишком далеко! Нужно подойти ближе');
-        this.gamePlay.showPopup('Он слишком далеко! Нужно подойти ближе');
+        this.gamePlay.showPopup('Нужно подойти ближе');
       }
       return;
     }
     // Сообщения об ошибке
-    if (!gameState.selectedHero && hero && hero.character.player === 'computer') {
+    if (!gameState.selectedHero && hero && hero.character.player === side.COMP) {
       let { type } = hero.character;
       type = type[0].toUpperCase() + type.slice(1);
       // GamePlay.showError(`Это ${type}! Он явно не из наших!`);
       this.gamePlay.showPopup(`Это ${type}! Он явно не из наших!`);
     }
 
-    if (!gameState.selectedHero && !hero) {
-      // GamePlay.showError('Тут никого нет');
-      this.gamePlay.showPopup('Тут никого нет');
+    // if (!gameState.selectedHero && !hero) {
+    //   // GamePlay.showError('Тут никого нет');
+    //   this.gamePlay.showPopup('Тут никого нет');
+    // }
+  }
+
+  static createToolTipTemplate(hero) {
+    const {
+      level,
+      health,
+      attack,
+      defence,
+    } = hero.character;
+    return `\u{1F396} ${level} \u{2694} ${attack} \u{1F6E1} ${defence} \u{2764} ${health}`;
+  }
+
+  activeCursor(hero) {
+    if (hero) {
+      const pointer = hero.character.player === side.USER ? cursors.pointer : cursors.notallowed;
+      this.gamePlay.setCursor(pointer);
+    } else {
+      this.gamePlay.setCursor(cursors.auto);
     }
   }
 
@@ -104,38 +132,59 @@ export default class GameController {
     // TODO: react to mouse enter
     const hero = gameState.teams.find((elem) => elem.position === index);
     // Показывает подсказку, если в поле есть герой
+    // if (hero) {
+    //   const {
+    //     level,
+    //     health,
+    //     attack,
+    //     defence,
+    //   } = hero.character;
+    //   const toolTip = `\u{1F396} ${level} \u{2694} ${attack} \u{1F6E1} ${defence} \u{2764} ${health}`;
+    //   this.gamePlay.showCellTooltip(toolTip, index);
+    // }
     if (hero) {
-      const {
-        level,
-        health,
-        attack,
-        defence,
-      } = hero.character;
-      const toolTip = `\u{1F396} ${level} \u{2694} ${attack} \u{1F6E1} ${defence} \u{2764} ${health}`;
+      const toolTip = this.constructor.createToolTipTemplate(hero);
       this.gamePlay.showCellTooltip(toolTip, index);
     }
 
-    // Если в клетке есть герой, но не выделен
-    if (hero) {
-      const pointer = hero.character.player === 'user' ? cursors.pointer : cursors.notallowed;
-      this.gamePlay.setCursor(pointer);
-    } else {
-      this.gamePlay.setCursor(cursors.auto);
-    }
+    this.activeCursor(hero);
+
+    // Если в клетке есть герой
+    // if (hero) {
+    //   const pointer = hero.character.player === side.USER ? cursors.pointer : cursors.notallowed;
+    //   this.gamePlay.setCursor(pointer);
+    // } else {
+    //   this.gamePlay.setCursor(cursors.auto);
+    // }
 
     // Изменение типа курсора при выделенном герое
     if (gameState.selectedHero) {
-      if (gameState.availableSteps.includes(index) && !hero) {
-        this.gamePlay.setCursor(cursors.pointer);
-        this.gamePlay.selectCell(index, 'green');
-      } else if (hero && hero.character.player === 'computer' && gameState.availableAttack.includes(index)) {
-        this.gamePlay.setCursor(cursors.crosshair);
-        this.gamePlay.selectCell(index, 'red');
-      } else if (hero && hero.character.player === 'user') {
-        this.gamePlay.setCursor(cursors.pointer);
-      } else {
-        this.gamePlay.setCursor(cursors.notallowed);
-      }
+      // if (gameState.availableSteps.includes(index) && !hero) {
+      //   this.gamePlay.setCursor(cursors.pointer);
+      //   this.gamePlay.selectCell(index, 'green');
+      // } else if (hero && hero.character.player === side.COMP && gameState.availableAttack.includes(index)) {
+      //   this.gamePlay.setCursor(cursors.crosshair);
+      //   this.gamePlay.selectCell(index, 'red');
+      // } else if (hero && hero.character.player === side.USER) {
+      //   this.gamePlay.setCursor(cursors.pointer);
+      // } else {
+      //   this.gamePlay.setCursor(cursors.notallowed);
+      // }
+      this.activeCursorSelectedHero(index, hero);
+    }
+  }
+
+  activeCursorSelectedHero(index, hero) {
+    if (gameState.availableSteps.includes(index) && !hero) {
+      this.gamePlay.setCursor(cursors.pointer);
+      this.gamePlay.selectCell(index, 'green');
+    } else if (hero && hero.character.player === side.COMP && gameState.availableAttack.includes(index)) {
+      this.gamePlay.setCursor(cursors.crosshair);
+      this.gamePlay.selectCell(index, 'red');
+    } else if (hero && hero.character.player === side.USER) {
+      this.gamePlay.setCursor(cursors.pointer);
+    } else {
+      this.gamePlay.setCursor(cursors.notallowed);
     }
   }
 
@@ -162,19 +211,22 @@ export default class GameController {
    * Загрузка сохраненной игры, если такая есть
    */
   loadGame() {
-    console.warn('Загрузка');
     // Чтобы не добавлялись лишние события при загрузке во время игры
     if (this.gamePlay.cellClickListeners.length === 0) {
       this.checkCell();
     }
-    const load = this.stateService.load();
-    if (load) {
-      gameState = GameState.from(load);
-      this.gamePlay.drawUi(Object.values(themes)[gameState.stage - 1]);
-      this.gamePlay.redrawPositions(gameState.teams);
-    } else {
-      console.warn('Ошибка загрузки/Новая игра');
-      this.newGame();
+    try {
+      const load = this.stateService.load();
+      if (load) {
+        gameState = GameState.from(load);
+        this.gamePlay.drawUi(Object.values(themes)[gameState.stage - 1]);
+        this.gamePlay.redrawPositions(gameState.teams);
+      } else {
+        this.newGame();
+      }
+    } catch (error) {
+      this.gamePlay.showPopup(`Ошибка загрузки: "${error.message}"`);
+      localStorage.removeItem('state');
     }
   }
 
@@ -182,12 +234,12 @@ export default class GameController {
    * Новая игра сначала
    */
   newGame() {
-    console.warn('Новая игра/Ошибка загрузки сохраненной');
+    // console.warn('Новая игра/Ошибка загрузки сохраненной');
     if (this.gamePlay.cellClickListeners.length === 0) {
       this.gamePlay.addCellClickListener(this.onCellClick.bind(this));
     }
     const totalScores = gameState ? gameState.scores : 0;
-    gameState = new GameState(1, [], 'user', totalScores);
+    gameState = new GameState(1, [], side.USER, totalScores);
     this.nextStage(gameState.stage);
   }
 
@@ -195,32 +247,20 @@ export default class GameController {
    * Переход хода
    */
   nextPlayer() {
-    gameState.motion = (gameState.motion === 'user') ? 'computer' : 'user';
+    gameState.motion = (gameState.motion === side.USER) ? side.COMP : side.USER;
     // console.log('Ход переходит к:', gameState.motion);
-    if (gameState.motion === 'computer') {
+    if (gameState.motion === side.COMP) {
       this.computerLogic();
     }
     gameState.clear();
   }
 
   /**
-   * Повышаем уровень членов команды
-   */
-  levelUp() {
-    gameState.teams.forEach((member) => {
-      const parameter = member.character;
-      parameter.level += 1;
-      parameter.health = parameter.health + 80 >= 100 ? 100 : parameter.health + 80;
-      parameter.attack = Math.floor(Math.max(parameter.attack, parameter.attack * (0.8 + parameter.health / 100)));
-    });
-  }
-
-  /**
    * Проверка окончания уровня
    */
   checkLevel() {
-    const userValue = gameState.teams.some((member) => member.character.player === 'user');
-    const computerValue = gameState.teams.some((member) => member.character.player === 'computer');
+    const userValue = gameState.teams.some((member) => member.character.player === side.USER);
+    const computerValue = gameState.teams.some((member) => member.character.player === side.COMP);
     if (userValue && computerValue) {
       this.nextPlayer();
       return;
@@ -243,22 +283,20 @@ export default class GameController {
    * @param {number} stage - Номер уровня
    */
   nextStage(stage) {
-    // console.warn('Переход на следующий уровень');
     if (stage === 1) {
-      // console.warn(`Уровень ${stage}`);
-      GameController.teamGeneration(userTypes, 'user', 1, 2);
-      GameController.teamGeneration(computerTypes, 'computer', 1, 2);
+      GameController.teamGeneration(userTypes, side.USER, 1, 2);
+      GameController.teamGeneration(computerTypes, side.COMP, 1, 2);
     }
     //
     if (stage > 1 && stage < 5) {
       // Повышаем уровень оставшихся
-      this.levelUp();
+      this.constructor.levelUp();
       // + к команде user
       const count = (stage === 2) ? 1 : 2;
-      GameController.teamGeneration(userTypes, 'user', stage - 1, count);
+      GameController.teamGeneration(userTypes, side.USER, stage - 1, count);
       // новая команда компа
-      const userCount = gameState.teams.filter((member) => member.character.player === 'user').length;
-      GameController.teamGeneration(computerTypes, 'computer', stage, userCount);
+      const userCount = gameState.teams.filter((member) => member.character.player === side.USER).length;
+      GameController.teamGeneration(computerTypes, side.COMP, stage, userCount);
     }
 
     //
@@ -311,8 +349,8 @@ export default class GameController {
    */
   computerLogic() {
     const { teams } = gameState;
-    const computerTeams = teams.filter((member) => member.character.player === 'computer');
-    const userTeams = teams.filter((member) => member.character.player === 'user');
+    const computerTeams = teams.filter((member) => member.character.player === side.COMP);
+    const userTeams = teams.filter((member) => member.character.player === side.USER);
     // Проверяем возможность атаки
     const attack = computerTeams.some((compUnit) => {
       gameState.availableAttack = getAvailableAttack(compUnit.position, compUnit.character.attackRadius);

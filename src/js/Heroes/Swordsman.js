@@ -1,9 +1,19 @@
 import Character from '../Character';
+import heroesConfig from '../heroesCharacteristic';
 
 export default class Swordsman extends Character {
   constructor(level) {
-    super(level, 'user', 4, 1, 'swordsman');
-    this.attack = 40;
-    this.defence = 10;
+    const {
+      type,
+      attack,
+      defence,
+      player,
+      stepsRadius,
+      attackRadius,
+    } = heroesConfig[new.target.name];
+
+    super(level, attack, defence, player, stepsRadius, attackRadius);
+
+    this.type = type;
   }
 }

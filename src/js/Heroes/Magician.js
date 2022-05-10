@@ -1,9 +1,19 @@
 import Character from '../Character';
+import heroesConfig from '../heroesCharacteristic';
 
 export default class Magician extends Character {
   constructor(level) {
-    super(level, 'user', 1, 4, 'magician');
-    this.attack = 10;
-    this.defence = 40;
+    const {
+      type,
+      attack,
+      defence,
+      player,
+      stepsRadius,
+      attackRadius,
+    } = heroesConfig[new.target.name];
+
+    super(level, attack, defence, player, stepsRadius, attackRadius);
+
+    this.type = type;
   }
 }

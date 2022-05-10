@@ -1,5 +1,5 @@
 import Team from './Team';
-
+import side from './side';
 /**
  * Generates random characters
  *
@@ -11,7 +11,7 @@ export function characterGenerator(allowedTypes, maxLevel) {
   // TODO: write logic here
   const randomType = Math.floor(Math.random() * allowedTypes.length);
   const randomLevel = Math.floor(Math.random() * maxLevel) + 1;
-  return new allowedTypes[randomType](randomLevel, allowedTypes[randomType]);
+  return new allowedTypes[randomType](randomLevel);
 }
 
 export function generateTeam(allowedTypes, maxLevel, characterCount) {
@@ -23,8 +23,6 @@ export function generateTeam(allowedTypes, maxLevel, characterCount) {
   return team;
 }
 
-/// Мое творчество
-
 /**
  * Генерирует случное поле для первого уровня
  * @param {*} player - Игрок 'user' или 'computer'
@@ -34,14 +32,12 @@ export function startFieldGenerator(player) {
   const boardSize = 8;
   const cellsCount = boardSize ** 2 - 1;
   const validateCells = [];
-  const startCell = player === 'user' ? 0 : boardSize - 2;
+  const startCell = player === side.USER ? 0 : boardSize - 2;
   for (let i = startCell; i <= cellsCount; i += boardSize) {
     validateCells.push(i, i + 1);
   }
-  //* Массив номеров доступных полей
-  // return validateCells;
 
-  //* Для случайного номера ячейки
+  // Для случайного номера ячейки
   const randomIndex = Math.floor(Math.random() * validateCells.length);
   return validateCells[randomIndex];
 }

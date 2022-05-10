@@ -1,22 +1,16 @@
 export default class Character {
-  constructor(level, player, stepsRadius, attackRadius, type = 'generic') {
-    this.level = level;
-    this.attack = 0;
-    this.defence = 0;
-    this.health = 10;
-    this.type = type;
-    this.player = player;
-    this.stepsRadius = stepsRadius;
-    this.attackRadius = attackRadius;
+  constructor(level, attack, defence, player, stepsRadius, attackRadius) {
+    this.level = level; // Уровень игрока
+    this.attack = attack; // Сила атаки
+    this.defence = defence; // Защита
+    this.health = 10; // Здоровье
+    this.player = player; // Тип игрока 'user' или 'computer'
+    this.stepsRadius = stepsRadius; // Доступный радиус хода в клетках
+    this.attackRadius = attackRadius; // Доступный радиус атаки в клетках
+
     // TODO: throw error if user use "new Character()"
     if (new.target.name === 'Character') {
       throw new Error('Запрещено создавать объекты базового класса Character!');
     }
   }
-
-  // levelUp() {
-  //   this.level += 1;
-  //   this.health = this.health + 80 >= 100 ? 100 : this.health + 80;
-  //   this.attack = Math.floor(Math.max(this.attack, this.attack * (0.8 + this.health / 100)));
-  // }
 }
