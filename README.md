@@ -1,3 +1,10 @@
+![example workflow](https://github.com/lekseff/RetroGame/actions/workflows/ci_test.yml/badge.svg)
+
+![example workflow](https://github.com/lekseff/RetroGame/actions/workflows/deploy.yml/badge.svg)
+
+[GitHub Pages](https://lekseff.github.io/RetroGame/)
+
+
 # AJS. Retro Game
 
 ###### tags: `netology` `advanced js`
