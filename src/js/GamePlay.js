@@ -48,13 +48,6 @@ export default class GamePlay {
       </div>
     `;
 
-    this.popup.innerHTML = `
-      <div class="popup__window">
-          <p class="popup__title"></p>
-          <button class="popup__button">Закрыть</button>
-      </div>
-    `;
-
     this.newGameEl = this.container.querySelector('[data-id=action-restart]');
     this.saveGameEl = this.container.querySelector('[data-id=action-save]');
     this.loadGameEl = this.container.querySelector('[data-id=action-load]');

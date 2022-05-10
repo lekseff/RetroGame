@@ -3,7 +3,7 @@ import GamePlay from '../GamePlay';
 import side from '../side';
 
 const gamePlay = new GamePlay();
-const gameCtr = new GameController(gamePlay, '');
+const gameController = new GameController(gamePlay, '');
 
 jest.mock('../GamePlay');
 
@@ -21,7 +21,7 @@ test('Проверка шаблона информации', () => {
   expect(received).toBe(expected);
 });
 
-describe('Проверка типа курсора', () => {
+describe('Проверка типов курсора', () => {
   beforeEach(() => {
     jest.resetAllMocks();
   });
@@ -32,8 +32,8 @@ describe('Проверка типа курсора', () => {
         player: side.USER,
       },
     };
-    gameCtr.activeCursor(data);
-    expect(gameCtr.gamePlay.setCursor).toBeCalledWith('pointer');
+    gameController.activeCursor(data);
+    expect(gameController.gamePlay.setCursor).toBeCalledWith('pointer');
   });
 
   test('Курсор над computer', () => {
@@ -42,73 +42,56 @@ describe('Проверка типа курсора', () => {
         player: side.COMP,
       },
     };
-    gameCtr.activeCursor(data);
-    expect(gameCtr.gamePlay.setCursor).toBeCalledWith('not-allowed');
+    gameController.activeCursor(data);
+    expect(gameController.gamePlay.setCursor).toBeCalledWith('not-allowed');
   });
 
   test('Курсор на пустым полем', () => {
     const data = undefined;
-    gameCtr.activeCursor(data);
-    expect(gameCtr.gamePlay.setCursor).toBeCalledWith('auto');
+    gameController.activeCursor(data);
+    expect(gameController.gamePlay.setCursor).toBeCalledWith('auto');
   });
-
-  // подсветка поля
 });
 
-// it('test', () => {
-//   const gamePlay = new GamePlay();
-//   const gameCtr = new GameController(gamePlay, '');
-//   const gameState = {
-//     teams: [
-//       {
-//         character: {
-//           level: 1,
-//           type: 'bowman',
-//           health: 80,
-//           attack: 10,
-//           defence: 40,
-//           player: 'user',
-//           stepsRadius: 2,
-//           attackRadius: 3,
-//         },
-//         position: 1,
-//       },
-//     ],
-//   };
+describe('Выделение ячейки поля', () => {
+  const index = 1;
+  beforeEach(() => {
+    jest.resetAllMocks();
+  });
 
-//   gameCtr.onCellEnter(1);
-//   expect(gamePlay.setCursor).toHaveBeenCalledTimes(1);
-// });
+  test('Выделение поля для хода', () => {
+    const data = undefined;
+    gameController.gameState = {
+      availableSteps: [1],
+      availableAttack: [2],
+    };
+    gameController.activeCursorSelectedHero(index, data);
+    expect(gameController.gamePlay.setCursor).toBeCalledWith('pointer');
+    expect(gameController.gamePlay.selectCell.mock.calls[0][1]).toBe('green');
+  });
 
-// describe('test', () => {
-// const gameState = {
-//   teams: [
-//     {
-//       character: {
-//         level: 1,
-//         type: 'bowman',
-//         health: 80,
-//         attack: 10,
-//         defence: 40,
-//         player: 'user',
-//         stepsRadius: 2,
-//         attackRadius: 3,
-//       },
-//       position: 1,
-//     },
-//   ],
-// };
+  test('Выделение поля для атаки', () => {
+    const data = {
+      character: {
+        player: side.COMP,
+      },
+    };
+    gameController.gameState = {
+      availableSteps: [1],
+      availableAttack: [1],
+    };
+    gameController.activeCursorSelectedHero(index, data);
+    expect(gameController.gamePlay.setCursor).toBeCalledWith('crosshair');
+    expect(gameController.gamePlay.selectCell.mock.calls[0][1]).toBe('red');
+  });
 
-//   beforeEach(() => {
-//     jest.clearAllMocks();
-//   });
-
-//   test('pointer', () => {
-//     const gamePlay = new GamePlay();
-//     const gameController = new GameController(gamePlay, '');
-//     const setCursorSpy = jest.spyOn(gameController.gamePlay, 'setCursor');
-//     const onCellEnterSpy = jest.spyOn(gameController, 'onCellEnter');
-//     gameController.onCellEnter(1);
-//     expect(onCellEnterSpy).toHaveBeenCalledWith('pointer');
-//   });
-// });
+  test('Не доступный вариант хода ', () => {
+    const data = undefined;
+    gameController.gameState = {
+      availableSteps: [2],
+      availableAttack: [2],
+    };
+    gameController.activeCursorSelectedHero(index, data);
+    expect(gameController.gamePlay.setCursor).toBeCalledWith('not-allowed');
+  });
+});

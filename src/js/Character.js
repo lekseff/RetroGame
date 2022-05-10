@@ -3,7 +3,7 @@ export default class Character {
     this.level = level; // Уровень игрока
     this.attack = attack; // Сила атаки
     this.defence = defence; // Защита
-    this.health = 10; // Здоровье
+    this.health = 100; // Здоровье
     this.player = player; // Тип игрока 'user' или 'computer'
     this.stepsRadius = stepsRadius; // Доступный радиус хода в клетках
     this.attackRadius = attackRadius; // Доступный радиус атаки в клетках
